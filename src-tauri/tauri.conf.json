@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Universal Downloader",
+  "productName": "RanTube",
   "version": "1.0.2",
   "identifier": "com.vokehman.universaldl",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Universal Downloader",
+        "title": "RanTube",
         "width": 1120,
         "height": 780,
         "minWidth": 900,
@@ -35,3 +35,4 @@
     }
   }
 }
+

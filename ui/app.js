@@ -15,8 +15,42 @@ const progressTitle = $('#progressTitle');
 const progressPercent = $('#progressPercent');
 const progressFill = $('#progressFill');
 const progressDetail = $('#progressDetail');
+const supabase = window.supabase.createClient('https://iqxlzhljakpyxwuadclp.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxeGx6aGxqYWtweXh3dWFkY2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2OTIxODYsImV4cCI6MjEwOTI2ODE4Nn0._ZgnIKUBPx17pjhmXO6xVIGCcRAtDGzXeL39XB-sm58');
+async function ensureAuth() { const { data } = await supabase.auth.getSession(); signedIn = !!data.session; localStorage.setItem('signedIn', signedIn ? '1' : '0'); }
+ensureAuth();
+let freeCount = Number(localStorage.getItem('freeDownloads') || 0);
+let signedIn = localStorage.getItem('signedIn') === '1';
 let selectedFolder = null;
 let busy = false;
+
+function showSignInPrompt() {
+  const email = prompt('Enter your email to sign in / sign up:');
+  if (!email) return;
+  const password = prompt('Enter password:');
+  if (!password) return;
+  supabase.auth.signUp({ email, password }).then(({ error }) => {
+    if (error) { supabase.auth.signInWithPassword({ email, password }).then(({ error: e2 }) => { if (e2) showError(e2.message); else { signedIn = true; localStorage.setItem('signedIn','1'); } }); }
+    else { signedIn = true; localStorage.setItem('signedIn','1'); }
+  });
+}
+
+// Update check
+async function checkForUpdate() {
+  try {
+    const res = await fetch('https://api.github.com/repos/randankevin/universal-downloader-tauri/releases/latest');
+    const data = await res.json();
+    const latest = (data.tag_name || '').replace(/^v/, '');
+    const current = '1.0.2';
+    if (latest && latest !== current) {
+      const banner = document.createElement('div');
+      banner.className = 'update-banner';
+      banner.textContent = `Update available: v${latest}. Click to download.`;
+      banner.onclick = () => window.open(data.html_url, '_blank');
+      document.body.prepend(banner);
+    }
+  } catch {}
+}
+checkForUpdate();
 
 function showError(message) {
   errorMessage.textContent = message;
@@ -69,6 +103,7 @@ window.downloader.onDownloadComplete(({ ok, cancelled, message }) => {
   progressTitle.textContent = message;
   progressPercent.textContent = ok ? '100%' : '—';
   if (ok) progressFill.style.width = '100%';
+  if (ok && !signedIn) { freeCount++; localStorage.setItem('freeDownloads', String(freeCount)); }
   if (cancelled) progressDetail.textContent = 'You can start another download whenever you’re ready.';
 });
 
@@ -114,7 +149,7 @@ form.addEventListener('submit', async (event) => {
     setupPanel.classList.remove('hidden');
     return;
   }
-  setBusy(true);
+  if (!signedIn && freeCount >= FREE_DOWNLOADS) { showSignInPrompt(); setBusy(false); return; }
   progressArea.classList.remove('hidden');
   progressTitle.textContent = 'Starting your download…';
   progressPercent.textContent = '0%';

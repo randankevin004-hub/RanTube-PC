@@ -121,3 +121,4 @@ footer p { margin: 0; color: #8595a1; font-size: 11px; line-height: 1.6; }
   footer p { order: 3; width: 100%; }
   .back-top { margin-left: auto; }
 }
+.whatsapp-button{display:inline-block;margin-top:10px;padding:8px 14px;background:#25D366;color:#fff;border-radius:6px;text-decoration:none;font-weight:600}

@@ -334,5 +334,6 @@ pub fn run() {
         .manage(AppState { active_pid: Mutex::new(None), cancelled: AtomicBool::new(false) })
         .invoke_handler(tauri::generate_handler![get_status, install_ytdlp, start_download, cancel_download, open_folder, open_ffmpeg_page])
         .run(tauri::generate_context!())
-        .expect("error while running Universal Downloader");
+        .expect("error while running RanTube");
 }
+
