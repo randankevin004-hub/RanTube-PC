@@ -151,7 +151,7 @@ form.addEventListener('submit', async (event) => {
     setupPanel.classList.remove('hidden');
     return;
   }
-  if (!signedIn && freeCount >= FREE_DOWNLOADS) { showSignInPrompt(); return; }
+  if (supabase && !signedIn) { showSignInPrompt(); return; }
   setBusy(true);
   progressArea.classList.remove('hidden');
   progressTitle.textContent = 'Starting your download…';
