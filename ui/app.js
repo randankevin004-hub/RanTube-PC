@@ -25,14 +25,24 @@ let selectedFolder = null;
 let busy = false;
 
 function showSignInPrompt() {
-  if (!supabase) { showError('Sign-in unavailable (no internet/Supabase).'); return; }
-  const email = prompt('Enter your email to sign in / sign up:');
-  if (!email) return;
-  const password = prompt('Enter password:');
-  if (!password) return;
-  supabase.auth.signUp({ email, password }).then(({ error }) => {
-    if (error) { supabase.auth.signInWithPassword({ email, password }).then(({ error: e2 }) => { if (e2) showError(e2.message); else { signedIn = true; localStorage.setItem('signedIn','1'); } }); }
-    else { signedIn = true; localStorage.setItem('signedIn','1'); }
+  const modal = document.getElementById('authModal');
+  modal.classList.remove('hidden');
+}
+const authModal = document.getElementById('authModal');
+if (authModal) {
+  document.getElementById('authSignIn').addEventListener('click', async () => {
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { const e = document.getElementById('authError'); e.textContent = error.message; e.classList.remove('hidden'); }
+    else { signedIn = true; localStorage.setItem('signedIn','1'); authModal.classList.add('hidden'); }
+  });
+  document.getElementById('authSignUp').addEventListener('click', async () => {
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) { const e = document.getElementById('authError'); e.textContent = error.message; e.classList.remove('hidden'); }
+    else { signedIn = true; localStorage.setItem('signedIn','1'); authModal.classList.add('hidden'); }
   });
 }
 
