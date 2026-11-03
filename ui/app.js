@@ -15,8 +15,9 @@ const progressTitle = $('#progressTitle');
 const progressPercent = $('#progressPercent');
 const progressFill = $('#progressFill');
 const progressDetail = $('#progressDetail');
-const supabase = window.supabase.createClient('https://iqxlzhljakpyxwuadclp.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxeGx6aGxqYWtweXh3dWFkY2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2OTIxODYsImV4cCI6MjEwOTI2ODE4Nn0._ZgnIKUBPx17pjhmXO6xVIGCcRAtDGzXeL39XB-sm58');
-async function ensureAuth() { const { data } = await supabase.auth.getSession(); signedIn = !!data.session; localStorage.setItem('signedIn', signedIn ? '1' : '0'); }
+let supabase = null;
+try { if (window.supabase) supabase = window.supabase.createClient('https://iqxlzhljakpyxwuadclp.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxeGx6aGxqYWtweXh3dWFkY2xwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2OTIxODYsImV4cCI6MjEwOTI2ODE4Nn0._ZgnIKUBPx17pjhmXO6xVIGCcRAtDGzXeL39XB-sm58'); } catch {}
+async function ensureAuth() { if (!supabase) return; const { data } = await supabase.auth.getSession(); signedIn = !!data.session; localStorage.setItem('signedIn', signedIn ? '1' : '0'); }
 ensureAuth();
 let freeCount = Number(localStorage.getItem('freeDownloads') || 0);
 let signedIn = localStorage.getItem('signedIn') === '1';
@@ -24,6 +25,7 @@ let selectedFolder = null;
 let busy = false;
 
 function showSignInPrompt() {
+  if (!supabase) { showError('Sign-in unavailable (no internet/Supabase).'); return; }
   const email = prompt('Enter your email to sign in / sign up:');
   if (!email) return;
   const password = prompt('Enter password:');
