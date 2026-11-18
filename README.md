@@ -6,9 +6,11 @@ A small Windows desktop interface for downloading media with yt-dlp.
 
 1. Download and run `RanTube-PC-Setup.exe` from the [latest GitHub release](https://github.com/randankevin004-hub/Universal-Downloader/releases/latest). The installer is per-user and does not require administrator privileges.
 2. Open RanTube PC. It checks for yt-dlp in the app's own tools folder and on your Windows PATH. If a copy is found, the app uses it. If no copy is found, choose **Set up** to allow the app to download the latest Windows executable from the official yt-dlp GitHub release. The app verifies the SHA-256 digest when GitHub provides one.
-3. Paste a media link, choose a quality and save folder, then select **Download video**.
+3. Paste a media link, choose a quality and save folder, then select **Download video**. Or use **Search** to find YouTube videos with yt-dlp and download a result.
 
 Downloads are saved locally. The app launches yt-dlp without a shell and passes the pasted URL as a separate argument. It uses an existing `ffmpeg.exe` on `PATH`; without FFmpeg, it selects a combined format when available and offers a link to FFmpeg builds. The FFmpeg location option is passed before the end-of-options marker so Windows paths are not interpreted as media URLs.
+
+The **Search** view displays video thumbnails and upload dates when the source provides them; search and format lookups run outside the UI thread. **Check formats** lists combined video/audio, video-only, and audio-only streams and lets you select an exact format. The **Browser** view uses native WebViews for multiple tabs, bookmarks, and recent navigation history, so it can load sites that reject iframe embedding. The **Downloads** view shows the active transfer and keeps a local list of finished, failed, and cancelled attempts. **Shortcuts** lets you change or reset the keyboard bindings; the defaults focus the download link (Ctrl+L), open search (Ctrl+Shift+F), open the browser (Ctrl+B), and show downloads (Ctrl+J). Browser data, shortcuts, and download history are stored in the app's local WebView storage.
 
 ## Build from source
 

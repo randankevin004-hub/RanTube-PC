@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Mutex};
 use std::thread;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl};
 
 struct AppState {
     active_pid: Mutex<Option<u32>>,
@@ -54,6 +54,48 @@ struct DownloadResult {
     ok: bool,
     cancelled: bool,
     error: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SearchResult {
+    id: String,
+    title: String,
+    url: String,
+    thumbnail: Option<String>,
+    duration: Option<f64>,
+    uploader: Option<String>,
+    upload_date: Option<String>,
+    upload_timestamp: Option<i64>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MediaFormat {
+    format_id: String,
+    ext: Option<String>,
+    resolution: Option<String>,
+    note: Option<String>,
+    format_type: &'static str,
+    filesize: Option<u64>,
+    vcodec: Option<String>,
+    acodec: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MediaFormatList {
+    title: String,
+    upload_date: Option<String>,
+    upload_timestamp: Option<i64>,
+    formats: Vec<MediaFormat>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BrowserNavigation {
+    tab_id: String,
+    url: String,
 }
 
 #[derive(Deserialize)]
@@ -197,6 +239,147 @@ fn quality_format(quality: &str, has_ffmpeg: bool) -> Result<String, String> {
     })
 }
 
+fn search_media_blocking(app: AppHandle, query: String) -> Result<Vec<SearchResult>, String> {
+    let query = query.trim();
+    if query.chars().count() < 2 || query.chars().count() > 160 || query.chars().any(char::is_control) {
+        return Err("Enter a search term between 2 and 160 characters.".into());
+    }
+    let tools = current_status(&app)?;
+    let executable = tools.yt_dlp.ok_or_else(|| "Set up yt-dlp before searching.".to_string())?;
+    let search = format!("ytsearch10:{query}");
+    let output = Command::new(executable)
+        .args(["--flat-playlist", "--dump-single-json", "--no-warnings", "--ignore-errors", &search])
+        .creation_flags(0x08000000)
+        .output()
+        .map_err(|e| format!("Could not start yt-dlp search: {e}"))?;
+    if !output.status.success() {
+        let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if detail.is_empty() {
+            "Search failed. Check your internet connection and try again.".into()
+        } else {
+            format!("Search failed: {}", detail.chars().take(240).collect::<String>())
+        });
+    }
+    let response: serde_json::Value = serde_json::from_slice(&output.stdout)
+        .map_err(|e| format!("Could not read the search results: {e}"))?;
+    let entries = response.get("entries").and_then(serde_json::Value::as_array)
+        .ok_or_else(|| "The search service returned no results.".to_string())?;
+    let results = entries.iter().filter_map(|entry| {
+        let id = entry.get("id").and_then(serde_json::Value::as_str)?.to_string();
+        let title = entry.get("title").and_then(serde_json::Value::as_str)?.to_string();
+        let candidate = entry.get("webpage_url")
+            .or_else(|| entry.get("original_url"))
+            .or_else(|| entry.get("url"))
+            .and_then(serde_json::Value::as_str);
+        let url = candidate.and_then(|value| {
+            Url::parse(value).ok().filter(|parsed| parsed.scheme() == "http" || parsed.scheme() == "https")
+                .map(|parsed| parsed.to_string())
+        }).or_else(|| {
+            id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-')
+                .then(|| format!("https://www.youtube.com/watch?v={id}"))
+        })?;
+        let safe_id = id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-');
+        let thumbnail = entry.get("thumbnail").and_then(serde_json::Value::as_str)
+            .or_else(|| entry.get("thumbnails").and_then(serde_json::Value::as_array)
+                .and_then(|items| items.iter().rev().find_map(|item| item.get("url").and_then(serde_json::Value::as_str))))
+            .map(str::to_string)
+            .or_else(|| safe_id.then(|| format!("https://i.ytimg.com/vi/{id}/hqdefault.jpg")));
+        Some(SearchResult {
+            id,
+            title,
+            url,
+            thumbnail,
+            duration: entry.get("duration").and_then(serde_json::Value::as_f64),
+            uploader: entry.get("uploader").or_else(|| entry.get("channel"))
+                .and_then(serde_json::Value::as_str).map(str::to_string),
+            upload_date: entry.get("upload_date").or_else(|| entry.get("release_date"))
+                .and_then(serde_json::Value::as_str).map(str::to_string),
+            upload_timestamp: entry.get("release_timestamp").or_else(|| entry.get("timestamp"))
+                .and_then(serde_json::Value::as_i64),
+        })
+    }).collect();
+    Ok(results)
+}
+
+#[tauri::command]
+async fn search_media(app: AppHandle, query: String) -> Result<Vec<SearchResult>, String> {
+    tauri::async_runtime::spawn_blocking(move || search_media_blocking(app, query))
+        .await
+        .map_err(|error| format!("Search task failed: {error}"))?
+}
+
+fn media_formats_blocking(app: AppHandle, url: String) -> Result<MediaFormatList, String> {
+    let parsed = Url::parse(&url).map_err(|_| "Enter a valid http or https video link.".to_string())?;
+    if parsed.scheme() != "http" && parsed.scheme() != "https" {
+        return Err("Only http and https video links can be checked.".into());
+    }
+    let executable = current_status(&app)?.yt_dlp
+        .ok_or_else(|| "Set up yt-dlp before checking formats.".to_string())?;
+    let output = Command::new(executable)
+        .args(["--dump-single-json", "--no-warnings", "--no-playlist", "--skip-download"])
+        .arg(parsed.as_str())
+        .creation_flags(0x08000000)
+        .output()
+        .map_err(|error| format!("Could not start the format check: {error}"))?;
+    if !output.status.success() {
+        let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if detail.is_empty() {
+            "Could not read formats for this link.".into()
+        } else {
+            format!("Could not read formats: {}", detail.chars().take(240).collect::<String>())
+        });
+    }
+    let info: serde_json::Value = serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("Could not read the format information: {error}"))?;
+    let formats = info.get("formats").and_then(serde_json::Value::as_array)
+        .ok_or_else(|| "This video did not return a format list.".to_string())?
+        .iter()
+        .filter_map(|format| {
+            let format_id = format.get("format_id").and_then(serde_json::Value::as_str)
+                .map(str::to_string)
+                .or_else(|| format.get("format_id").and_then(serde_json::Value::as_i64).map(|id| id.to_string()))?;
+            let vcodec = format.get("vcodec").and_then(serde_json::Value::as_str).map(str::to_string);
+            let acodec = format.get("acodec").and_then(serde_json::Value::as_str).map(str::to_string);
+            let has_video = vcodec.as_deref().map(|codec| codec != "none").unwrap_or(false);
+            let has_audio = acodec.as_deref().map(|codec| codec != "none").unwrap_or(false);
+            let format_type = match (has_video, has_audio) {
+                (true, true) => "combined",
+                (true, false) => "video",
+                (false, true) => "audio",
+                (false, false) => return None,
+            };
+            let resolution = format.get("resolution").and_then(serde_json::Value::as_str).map(str::to_string)
+                .or_else(|| format.get("height").and_then(serde_json::Value::as_u64).map(|height| format!("{height}p")));
+            Some(MediaFormat {
+                format_id,
+                ext: format.get("ext").and_then(serde_json::Value::as_str).map(str::to_string),
+                resolution,
+                note: format.get("format_note").and_then(serde_json::Value::as_str).map(str::to_string),
+                format_type,
+                filesize: format.get("filesize").or_else(|| format.get("filesize_approx"))
+                    .and_then(serde_json::Value::as_u64),
+                vcodec,
+                acodec,
+            })
+        })
+        .collect();
+    Ok(MediaFormatList {
+        title: info.get("title").and_then(serde_json::Value::as_str).unwrap_or("Video").to_string(),
+        upload_date: info.get("upload_date").or_else(|| info.get("release_date"))
+            .and_then(serde_json::Value::as_str).map(str::to_string),
+        upload_timestamp: info.get("release_timestamp").or_else(|| info.get("timestamp"))
+            .and_then(serde_json::Value::as_i64),
+        formats,
+    })
+}
+
+#[tauri::command]
+async fn get_video_formats(app: AppHandle, url: String) -> Result<MediaFormatList, String> {
+    tauri::async_runtime::spawn_blocking(move || media_formats_blocking(app, url))
+        .await
+        .map_err(|error| format!("Format check task failed: {error}"))?
+}
+
 fn parse_line(app: &AppHandle, line: &str) {
     if let Some(download) = line.find("[download]") {
         let rest = line[download + "[download]".len()..].trim();
@@ -226,6 +409,7 @@ fn start_download(
     state: State<'_, AppState>,
     url: String,
     quality: String,
+    format_id: Option<String>,
     folder: Option<String>,
 ) -> DownloadResult {
     let parsed = match Url::parse(&url) {
@@ -244,9 +428,23 @@ fn start_download(
             error: Some("No yt-dlp was found. Add yt-dlp.exe to PATH or set it up from this app.".into()),
         },
     };
-    let format = match quality_format(&quality, tools.ffmpeg.is_some()) {
-        Ok(format) => format,
-        Err(error) => return DownloadResult { ok: false, cancelled: false, error: Some(error) },
+    let format = match format_id {
+        Some(format_id)
+            if !format_id.is_empty()
+                && format_id.len() <= 80
+                && format_id.chars().all(|ch| ch.is_ascii_alphanumeric() || "._-".contains(ch)) =>
+        {
+            format_id
+        }
+        Some(_) => return DownloadResult {
+            ok: false,
+            cancelled: false,
+            error: Some("Choose a valid format from the format list.".into()),
+        },
+        None => match quality_format(&quality, tools.ffmpeg.is_some()) {
+            Ok(format) => format,
+            Err(error) => return DownloadResult { ok: false, cancelled: false, error: Some(error) },
+        },
     };
     let destination = PathBuf::from(folder.unwrap_or(tools.download_folder));
     if let Err(error) = fs::create_dir_all(&destination) {
@@ -327,12 +525,144 @@ fn open_ffmpeg_page() -> Result<(), String> {
         .map(|_| ()).map_err(|e| format!("Could not open the FFmpeg builds page: {e}"))
 }
 
+fn browser_webview_label(tab_id: &str) -> Result<String, String> {
+    if tab_id.is_empty() || tab_id.len() > 48 || !tab_id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-') {
+        return Err("Invalid browser tab.".into());
+    }
+    Ok(format!("browser-{tab_id}"))
+}
+
+fn web_url(value: &str) -> Result<Url, String> {
+    let url = Url::parse(value).map_err(|_| "Enter a valid web address.".to_string())?;
+    if url.scheme() != "http" && url.scheme() != "https" {
+        return Err("Only http and https addresses are supported in the browser.".into());
+    }
+    Ok(url)
+}
+
+fn validate_browser_bounds(x: f64, y: f64, width: f64, height: f64) -> Result<(), String> {
+    if ![x, y, width, height].iter().all(|value| value.is_finite())
+        || x.abs() > 10000.0 || y.abs() > 10000.0 || width < 1.0 || height < 1.0
+        || width > 10000.0 || height > 10000.0
+    {
+        return Err("The browser view has invalid dimensions.".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn show_browser_tab(
+    app: AppHandle,
+    tab_id: String,
+    url: String,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    validate_browser_bounds(x, y, width, height)?;
+    let label = browser_webview_label(&tab_id)?;
+    let url = web_url(&url)?;
+    let window = app.get_window("main").ok_or_else(|| "The main app window is unavailable.".to_string())?;
+    for webview in window.webviews() {
+        if webview.label().starts_with("browser-") {
+            webview.hide().map_err(|error| format!("Could not hide a browser tab: {error}"))?;
+        }
+    }
+    let webview = match app.get_webview(&label) {
+        Some(webview) => {
+            webview.set_position(tauri::LogicalPosition::new(x, y))
+                .map_err(|error| format!("Could not position the browser: {error}"))?;
+            webview.set_size(tauri::LogicalSize::new(width, height))
+                .map_err(|error| format!("Could not resize the browser: {error}"))?;
+            if webview.url().map_err(|error| error.to_string())? != url {
+                webview.navigate(url).map_err(|error| format!("Could not navigate the browser: {error}"))?;
+            }
+            webview
+        }
+        None => {
+            let app_for_navigation = app.clone();
+            let tab_for_navigation = tab_id.clone();
+            let builder = tauri::webview::WebviewBuilder::new(
+                label,
+                WebviewUrl::External(url),
+            )
+            .on_navigation(move |next_url| {
+                if next_url.scheme() != "http" && next_url.scheme() != "https" {
+                    return false;
+                }
+                let _ = app_for_navigation.emit_to(
+                    "main",
+                    "browser-navigation",
+                    BrowserNavigation { tab_id: tab_for_navigation.clone(), url: next_url.to_string() },
+                );
+                true
+            });
+            window.add_child(
+                builder,
+                tauri::LogicalPosition::new(x, y),
+                tauri::LogicalSize::new(width, height),
+            ).map_err(|error| format!("Could not open the built-in browser: {error}"))?
+        }
+    };
+    webview.show().map_err(|error| format!("Could not display the built-in browser: {error}"))
+}
+
+#[tauri::command]
+fn resize_browser_tab(
+    app: AppHandle,
+    tab_id: String,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    validate_browser_bounds(x, y, width, height)?;
+    let label = browser_webview_label(&tab_id)?;
+    let webview = app.get_webview(&label).ok_or_else(|| "The browser tab is not open yet.".to_string())?;
+    webview.set_position(tauri::LogicalPosition::new(x, y))
+        .map_err(|error| format!("Could not position the browser: {error}"))?;
+    webview.set_size(tauri::LogicalSize::new(width, height))
+        .map_err(|error| format!("Could not resize the browser: {error}"))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn hide_browser_tabs(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_window("main") {
+        for webview in window.webviews() {
+            if webview.label().starts_with("browser-") {
+                webview.hide().map_err(|error| format!("Could not hide the browser: {error}"))?;
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn close_browser_tab(app: AppHandle, tab_id: String) -> Result<(), String> {
+    let label = browser_webview_label(&tab_id)?;
+    if let Some(webview) = app.get_webview(&label) {
+        webview.close().map_err(|error| format!("Could not close the browser tab: {error}"))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    let parsed = web_url(&url)?;
+    Command::new("explorer.exe").arg(parsed.as_str()).spawn().map(|_| ()).map_err(|e| e.to_string())
+}
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(AppState { active_pid: Mutex::new(None), cancelled: AtomicBool::new(false) })
-        .invoke_handler(tauri::generate_handler![get_status, install_ytdlp, start_download, cancel_download, open_folder, open_ffmpeg_page])
+        .invoke_handler(tauri::generate_handler![
+            get_status, install_ytdlp, search_media, get_video_formats, start_download,
+            cancel_download, open_folder, open_ffmpeg_page, show_browser_tab, resize_browser_tab,
+            hide_browser_tabs, close_browser_tab, open_url
+        ])
         .run(tauri::generate_context!())
         .expect("error while running RanTube");
 }

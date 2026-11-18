@@ -3,113 +3,101 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f7f7f4" />
+  <meta name="theme-color" content="#f5f7fb" />
   <title>RanTube</title>
   <link rel="stylesheet" href="/ui/styles.css" />
 </head>
 <body>
   <div class="app-shell">
-    <aside class="rail">
-      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
-      <div class="rail-rule"></div>
-      <div class="rail-caption">MEDIA<br />TOOLS</div>
-      <div class="rail-bottom"><span class="rail-dot"></span><span>LOCAL APP</span></div>
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="RanTube home"><span class="brand-icon">▶</span><span>Ran<span class="brand-light">Tube</span></span></a>
+      <div class="side-section-label">WORKSPACE</div>
+      <nav class="side-nav" aria-label="Main navigation">
+        <button type="button" class="feature-tab active" data-view="download"><span class="nav-icon">↓</span><span>Download</span></button>
+        <button type="button" class="feature-tab" data-view="search"><span class="nav-icon">⌕</span><span>Search videos</span></button>
+        <button type="button" class="feature-tab" data-view="browser"><span class="nav-icon">◉</span><span>Browser</span></button>
+        <button type="button" class="feature-tab" data-view="activity"><span class="nav-icon">▤</span><span>Downloads</span><span id="downloadCount" class="nav-count">0</span></button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-status" id="toolStatus"><i class="status-dot"></i><span>Checking setup…</span></div>
+      <button type="button" class="settings-button" id="settingsButton"><span>⚙</span> Keyboard shortcuts</button>
+      <div class="sidebar-foot">YOUR MEDIA · YOUR DEVICE</div>
     </aside>
 
     <main class="main-content">
       <header class="topbar">
-        <div class="brand-name">RAN <span>TUBE</span></div><br>
-       <div class="tool-status" id="toolStatus"><i class="status-dot"></i><span>Checking setup…</span></div>
+        <div><p class="topbar-kicker">RANTUBE DESKTOP</p><h1 id="pageTitle">Download media</h1></div>
+        <button type="button" class="top-folder-button" id="openFolderButton"><span>▱</span> Open downloads</button>
       </header>
 
-      <section class="hero">
-        <div class="hero-copy">
-          <div class="eyebrow"><span class="eyebrow-line"></span> YOUR MEDIA, YOUR DEVICE</div>
-          <h1>Save a video.<br /><em>Keep it simple.</em></h1>
-          <p>Paste a link, choose a quality, and we’ll take care of the rest.</p>
+      <section class="page-view" data-main-view="download" aria-labelledby="pageTitle">
+        <div class="welcome-card">
+          <div class="welcome-copy">
+            <span class="eyebrow"><span class="eyebrow-dot"></span> SIMPLE. FAST. ON YOUR DEVICE.</span>
+            <h2>Save the videos<br /><span>you want to keep.</span></h2>
+            <p>Paste a link, choose a format and quality, and download it to your device.</p>
+            <div class="welcome-actions"><button type="button" class="welcome-search" data-open-view="search">⌕ &nbsp; Find a video</button><span>Supports sites powered by yt-dlp</span></div>
+          </div>
+          <div class="welcome-art" aria-hidden="true"><div class="art-glow"></div><div class="art-card art-card-back">♫</div><div class="art-card art-card-front"><span class="art-play">▶</span><span class="art-wave">▂ ▄ ▆ ▄ ▂</span></div><span class="art-star">✦</span></div>
         </div>
-        <div class="hero-art" aria-hidden="true">
-          <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
-          <div class="art-disc"><div class="disc-hole"></div><div class="play-mark"></div></div>
-          <div class="art-spark spark-one">✳</div><div class="art-spark spark-two">✳</div>
-          <div class="art-label">READY<br />WHEN YOU ARE</div>
-        </div>
+
+        <section class="panel download-panel" aria-labelledby="download-heading">
+          <div class="panel-heading"><div><span class="section-kicker">DOWNLOAD A LINK</span><h2 id="download-heading">Start with a video URL</h2><p>Paste a link from any supported site.</p></div><span class="panel-step">01</span></div>
+          <form id="downloadForm">
+            <label class="field-label" for="urlInput">VIDEO LINK</label>
+            <div class="url-controls"><div class="url-field"><span class="url-symbol">↗</span><input id="urlInput" type="url" placeholder="https://…" autocomplete="url" required /><button class="paste-button" id="pasteButton" type="button">Paste</button></div><button class="secondary-button" id="checkFormatsButton" type="button">▦ &nbsp; Check formats</button></div>
+            <div class="selected-format hidden" id="selectedFormat"><span>Selected format</span><strong id="selectedFormatText"></strong><button type="button" id="clearSelectedFormat" aria-label="Clear selected format">×</button></div>
+            <div class="options-row">
+              <div><label class="field-label" for="qualitySelect">QUALITY</label><select id="qualitySelect"><option value="best">Best available</option><option value="1080">Up to 1080p</option><option value="720">Up to 720p</option><option value="480">Up to 480p</option><option value="360">Up to 360p</option></select><p class="field-help">Choose a listed format for more control.</p><div class="dependency-note hidden" id="ffmpegNote">For merged high-quality video, install <button id="ffmpegLink" type="button">FFmpeg</button>.</div></div>
+              <div><span class="field-label">SAVE TO</span><button id="folderButton" class="folder-button" type="button"><span class="folder-glyph">▱</span><span id="folderText">Downloads</span><span class="folder-change">Change</span></button><p class="field-help">Files are saved on this device.</p></div>
+            </div>
+            <button id="downloadButton" class="primary-button" type="submit"><span class="button-symbol">↓</span><span id="buttonText">Download video</span><span class="button-arrow">→</span></button>
+          </form>
+          <div class="progress-area hidden" id="progressArea"><div class="progress-top"><span id="progressTitle">Getting things ready…</span><span id="progressPercent">0%</span></div><div class="progress-track"><div id="progressFill"></div></div><div class="progress-bottom"><span id="progressDetail">Connecting to the source…</span><button id="cancelButton" type="button">Cancel</button></div></div>
+          <div class="setup-panel hidden" id="setupPanel"><div class="setup-mark">↓</div><div class="setup-copy"><strong>One quick setup first</strong><p>Allow RanTube to download yt-dlp from its official GitHub release. The app verifies the file when GitHub provides a checksum.</p></div><button id="installButton" type="button">Set up</button></div>
+          <div class="inline-error hidden" id="errorMessage" role="alert"></div>
+        </section>
+        <div class="download-footnote"><span>✓</span> Downloads stay on your computer. Only save media you have permission to download.</div>
       </section>
 
-      <section class="download-card" aria-labelledby="download-heading">
-        <div class="card-heading">
-          <div><div class="step-label">01 <span>START HERE</span></div><h2 id="download-heading">What would you like to save?</h2></div>
-          <div class="card-icon">↘</div>
-        </div>
-
-        <form id="downloadForm">
-          <label class="field-label" for="urlInput">VIDEO LINK</label>
-          <div class="url-field">
-            <span class="link-icon" aria-hidden="true">↗</span>
-            <input id="urlInput" type="url" placeholder="Paste a link from a supported site" autocomplete="url" required />
-            <button class="paste-button" id="pasteButton" type="button">PASTE</button>
-          </div>
-
-          <div class="options-row">
-            <div class="quality-block">
-              <label class="field-label" for="qualitySelect">VIDEO QUALITY</label>
-              <div class="select-wrap"><select id="qualitySelect">
-                <option value="best">Best available (recommended)</option>
-                <option value="1080">Up to 1080p</option>
-                <option value="720">Up to 720p</option>
-                <option value="480">Up to 480p</option>
-                <option value="360">Up to 360p</option>
-              </select><span class="select-arrow">⌄</span></div>
-              <div class="dependency-note hidden" id="ffmpegNote">For highest quality, install FFmpeg from <button id="ffmpegLink" type="button">the recommended Windows builds</button>.</div>
-            </div>
-            <div class="folder-block">
-              <div class="field-label">SAVE TO</div>
-              <button id="folderButton" class="folder-button" type="button"><span class="folder-glyph">▱</span><span id="folderText">Downloads</span><span class="folder-change">CHANGE</span></button>
-            </div>
-          </div>
-
-          <button id="downloadButton" class="primary-button" type="submit"><span class="button-symbol">↓</span><span id="buttonText">Download video</span><span class="button-arrow">↗</span></button>
-        </form>
-
-        <div class="progress-area hidden" id="progressArea">
-          <div class="progress-top"><span id="progressTitle">Getting things ready…</span><span id="progressPercent">0%</span></div>
-          <div class="progress-track"><div id="progressFill"></div></div>
-          <div class="progress-bottom"><span id="progressDetail">This can take a little while.</span><button id="cancelButton" type="button">CANCEL</button></div>
-        </div>
-
-        <div class="setup-panel hidden" id="setupPanel">
-          <div class="setup-mark">↓</div>
-          <div class="setup-copy"><strong>One quick setup first</strong><p>Allow this app to download its own latest yt-dlp from the official GitHub release. It will verify the download when GitHub provides a checksum, and keep it separate from any yt-dlp already on your PC.</p></div>
-          <button id="installButton" type="button">SET UP</button>
-        </div>
-        <div class="inline-error hidden" id="errorMessage" role="alert"></div>
+      <section class="page-view hidden" id="searchView" aria-labelledby="searchHeading">
+        <div class="page-intro"><span class="section-kicker">DISCOVER</span><h2 id="searchHeading">Find your next download</h2><p>Search YouTube and identify a video by its thumbnail, channel, and upload date.</p></div>
+        <form class="search-form" id="searchForm"><label class="sr-only" for="searchInput">Search videos</label><span class="search-icon">⌕</span><input id="searchInput" type="search" maxlength="160" placeholder="Search videos, creators, or topics…" required /><button class="primary-button" id="searchButton" type="submit">Search <span>→</span></button></form>
+        <div class="inline-error hidden" id="searchError" role="alert"></div>
+        <div class="search-state hidden" id="searchLoading"><span class="spinner"></span><span>Searching for videos…</span></div>
+        <div class="results-heading hidden" id="resultsHeading"><h3>Results</h3><span>Choose a format or download</span></div>
+        <div class="search-results" id="searchResults" aria-live="polite"></div>
       </section>
 
-      <div class="bottom-grid">
-        <section class="note-card"><span class="note-icon">✦</span><div><strong>Made for everyday use</strong><p>Clear choices, no command line, no guesswork.</p></div></section>
-        <button class="open-folder-card" id="openFolderButton" type="button"><span class="folder-large">▱</span><span><strong>Open downloads</strong><small>See your saved videos</small></span><span class="open-arrow">↗</span></button>
-      </div>
+      <section class="page-view hidden" id="browserView" aria-labelledby="browserHeading">
+        <div class="page-intro browser-intro"><span class="section-kicker">EXPLORE</span><h2 id="browserHeading">Browse the web</h2><p>A full in-app webview with tabs, bookmarks, and browsing history.</p></div>
+        <div class="browser-workspace">
+          <div class="browser-tabs" id="browserTabs" role="tablist" aria-label="Browser tabs"></div>
+          <form class="browser-toolbar" id="browserForm"><button type="button" id="browserBack" aria-label="Back" title="Back">←</button><button type="button" id="browserForward" aria-label="Forward" title="Forward">→</button><button type="button" id="browserHome" aria-label="Home" title="Home">⌂</button><label class="sr-only" for="browserAddress">Web address or search</label><input id="browserAddress" type="text" inputmode="url" autocomplete="url" placeholder="Enter a web address or search…" /><button type="submit" class="browser-go">Go</button><button type="button" id="bookmarkButton" title="Bookmark this page">☆</button><button type="button" id="browserDownloadButton">Use link</button><button type="button" id="browserExternalButton" title="Open in your default browser">↗</button></form>
+          <div class="inline-error hidden" id="browserError" role="alert"></div>
+          <div class="browser-surface" id="browserSurface" aria-label="Web page"></div>
+        </div>
+        <div class="browser-lists"><section class="panel"><div class="list-heading"><h3>Bookmarks</h3><span>Saved pages</span></div><div id="bookmarkList" class="browser-link-list"></div></section><section class="panel"><div class="list-heading"><h3>Recent history</h3><span>Last visited</span></div><div id="browserHistoryList" class="browser-link-list"></div></section></div>
+      </section>
 
-      <footer><span>RANTUBE / Made By Randan Kevin <span class="footer-sep">/</span> RUNS ON YOUR DEVICE</span><span id="versionText">VERSION 1.0</span><a class="whatsapp-link" href="#" onclick="window.downloader.openUrl('https://wa.me/254708063827');return false;"><img src="https://cdn.simpleicons.org/whatsapp" alt="WhatsApp" width="20" height="20" /></a></footer>
+      <section class="page-view hidden" id="activityView" aria-labelledby="activityHeading">
+        <div class="page-intro activity-intro"><div><span class="section-kicker">DOWNLOAD MANAGER</span><h2 id="activityHeading">Your downloads</h2><p>Track what is running and open your recent files.</p></div><button type="button" class="text-button" id="clearDownloadsButton">Clear history</button></div>
+        <div class="inline-error hidden" id="activityError" role="alert"></div>
+        <section class="panel activity-panel"><div class="list-heading"><h3>Active</h3><span>In progress now</span></div><div id="activeDownloads"><div class="empty-state">No active downloads.</div></div></section>
+        <section class="panel activity-panel"><div class="list-heading"><h3>Finished</h3><span>Recently completed</span></div><div id="finishedDownloads"><div class="empty-state">Finished downloads will appear here.</div></div></section>
+      </section>
+      <footer class="app-footer"><span>RanTube <span>·</span> RUNS ON YOUR DEVICE</span><a class="whatsapp-link" href="#" onclick="window.downloader.openUrl('https://wa.me/254708063827');return false;">Help ↗</a></footer>
     </main>
   </div>
-  <div class="auth-modal hidden" id="authModal">
-  <div class="auth-card">
-    <h2>Sign in to continue</h2>
-    <input id="authEmail" type="email" placeholder="Email" />
-    <input id="authPassword" type="password" placeholder="Password" />
-    <div class="auth-actions">
-      <button id="authSignIn">Sign in</button>
-      <button id="authSignUp">Create account</button>
-    </div>
-    <p class="auth-error hidden" id="authError"></p>
+
+  <div class="modal-backdrop hidden" id="formatsModal" role="dialog" aria-modal="true" aria-labelledby="formatsTitle">
+    <section class="modal-card formats-modal"><header class="modal-header"><div><span class="section-kicker">MEDIA DETAILS</span><h2 id="formatsTitle">Available formats</h2><p id="formatsMeta"></p></div><button class="icon-button" id="closeFormatsModal" type="button" aria-label="Close">×</button></header><div class="formats-loading hidden" id="formatsLoading"><span class="spinner"></span>Checking formats…</div><div class="inline-error hidden" id="formatsError" role="alert"></div><div class="formats-list" id="formatsList"></div><p class="modal-footnote">Separate video and audio streams need FFmpeg to merge. Audio-only downloads remain audio files.</p></section>
   </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script type="module" src="/ui/app.js"></script>
+  <div class="modal-backdrop hidden" id="shortcutModal" role="dialog" aria-modal="true" aria-labelledby="shortcutHeading">
+    <section class="modal-card shortcut-card"><header class="modal-header"><div><span class="section-kicker">PREFERENCES</span><h2 id="shortcutHeading">Keyboard shortcuts</h2></div><button class="icon-button" type="button" id="closeShortcutModal" aria-label="Close">×</button></header><p class="shortcut-help">Choose a shortcut, then press a key combination that includes Ctrl or Alt.</p><div class="inline-error hidden" id="shortcutError" role="alert"></div><div class="shortcut-list"><div><span>Focus download link</span><button type="button" data-shortcut="download">Ctrl+L</button></div><div><span>Search videos</span><button type="button" data-shortcut="search">Ctrl+Shift+F</button></div><div><span>Open browser</span><button type="button" data-shortcut="browser">Ctrl+B</button></div><div><span>Open downloads</span><button type="button" data-shortcut="activity">Ctrl+J</button></div></div><div class="modal-actions"><button type="button" id="resetShortcutsButton" class="text-button">Reset defaults</button><button type="button" id="doneShortcutButton" class="primary-button">Done</button></div></section>
+  </div>
+  <div class="modal-backdrop hidden" id="authModal"><section class="modal-card"><h2>Sign in to continue</h2><input id="authEmail" type="email" placeholder="Email" /><input id="authPassword" type="password" placeholder="Password" /><div class="auth-actions"><button id="authSignIn" type="button">Sign in</button><button id="authSignUp" type="button">Create account</button></div><p class="auth-error hidden" id="authError"></p></section></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="/ui/app.js"></script>
 </body>
 </html>
-
-
-
-

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b1219">
-    <meta name="description" content="A friendly Windows desktop app for yt-dlp. Paste a link, choose quality and save location, then download.">
+    <meta name="description" content="Search videos, compare available formats, browse sites in-app, and manage local downloads with RanTube for Windows.">
     <title>RanTube for Windows</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
@@ -21,9 +21,9 @@
     <main id="top">
       <section class="hero">
         <div class="hero-copy">
-          <div class="eyebrow"><span class="live-dot"></span> A SIMPLE DESKTOP APP FOR YT-DLP</div>
-          <h1>Downloads,<br><span>made simple.</span></h1>
-          <p class="intro">Paste a link, choose the quality and save location, then download. No terminal or command line to learn.</p>
+          <div class="eyebrow"><span class="live-dot"></span> A FRIENDLY DESKTOP MEDIA TOOL</div>
+          <h1>Find it.<br><span>Choose it. Save it.</span></h1>
+          <p class="intro">Search with video previews and upload dates, inspect available formats, or browse a site and download from one clear desktop workspace.</p>
           <div class="download-row">
             <a class="download-button" href="https://raw.githubusercontent.com/randankevin004-hub/Universal-Downloader/main/Universal-Downloader-Tauri-Setup-1.0.2.exe" download>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v10.17l3.59-3.58L18 11l-6 6-6-6 1.41-1.41L11 13.17V3Zm-6 15h14v3H5v-3Z"/></svg>
@@ -32,7 +32,7 @@
             </a>
             <p class="download-note">Free · Direct download · No account required</p>
           </div>
-          <div class="trust-line"><span aria-hidden="true">✓</span> Windows 10 and 11 · Your downloads stay on your PC</div>
+          <div class="trust-line"><span aria-hidden="true">✓</span> Windows 10 and 11 · Local downloads · No command line</div>
         </div>
 
         <div class="app-wrap" aria-label="RanTube app preview">
@@ -40,12 +40,14 @@
           <div class="app-window">
             <div class="window-bar"><span class="window-mark"><svg viewBox="0 0 64 64"><path d="M29 11h6v22l9-9 5 5-15 15-15-15 5-5 9 9V11Zm-15 39h36v5H14z"/></svg></span><b>RanTube</b><span class="window-controls">−　□　×</span></div>
             <div class="window-content">
-              <div class="welcome"><small>PASTE A VIDEO OR AUDIO LINK</small><h2>What would you like to save?</h2><p>Choose a link from a site supported by yt-dlp.</p></div>
-              <div class="input-label">VIDEO LINK</div>
-              <div class="input-box"><span>https://www.example.com/watch?v=…</span><b>Paste</b></div>
-              <div class="option-row"><div><small>VIDEO QUALITY</small><b>Best available</b></div><div><small>SAVE TO</small><b>Downloads <span>⌄</span></b></div></div>
-              <div class="save-button"><svg viewBox="0 0 24 24"><path d="M11 3h2v10.17l3.59-3.58L18 11l-6 6-6-6 1.41-1.41L11 13.17V3Zm-6 15h14v3H5v-3Z"/></svg> Download video</div>
-              <div class="status-row"><span class="status-dot"></span><span>Ready when you are</span><span class="status-check">✓</span></div>
+              <aside class="preview-sidebar"><b>RanTube</b><span class="preview-active">⌕ &nbsp; Search videos</span><span>↓ &nbsp; Download</span><span>◉ &nbsp; Browser</span><span>▤ &nbsp; Downloads</span></aside>
+              <div class="preview-main">
+                <div class="preview-heading"><small>DISCOVER</small><h2>Find your next download</h2><p>Search, check formats, and save it.</p></div>
+                <div class="preview-search">⌕ &nbsp; Search videos, creators, or topics… <b>Search →</b></div>
+                <div class="preview-video"><div class="preview-thumb">▶</div><div class="preview-video-copy"><b>A peaceful place to focus</b><small>Calm Studio · Uploaded 2 weeks ago</small><div><span>Formats</span><strong>Download</strong></div></div></div>
+                <div class="preview-format"><span>AVAILABLE FORMATS</span><b>Video + audio</b><b>Video only</b><b>Audio only</b></div>
+                <div class="preview-status"><span>ACTIVE DOWNLOAD</span><b>Ready to save</b><i><span></span></i></div>
+              </div>
             </div>
           </div>
           <div class="float-tag"><span class="float-check">✓</span> No commands to type</div>
@@ -53,24 +55,27 @@
       </section>
 
       <section class="features" aria-label="App features">
-        <article><span class="feature-icon">⌕</span><div><h3>Just paste a link</h3><p>Start a download without learning command-line tools.</p></div></article>
-        <article><span class="feature-icon">▤</span><div><h3>Choose your quality</h3><p>Pick a quality and a folder that works for you.</p></div></article>
-        <article><span class="feature-icon">↻</span><div><h3>Finds yt-dlp for you</h3><p>Uses yt-dlp on your PC or offers to set up its own copy.</p></div></article>
-        <article><span class="feature-icon">▣</span><div><h3>Runs on your computer</h3><p>Downloads are saved directly to a folder on your PC.</p></div></article>
+        <article><span class="feature-icon">⌕</span><div><h3>Search visually</h3><p>Scan video thumbnails, channels, duration, and relative upload dates before choosing a result.</p></div></article>
+        <article><span class="feature-icon">▦</span><div><h3>Choose exact formats</h3><p>Compare combined video and audio, video-only, and audio-only streams.</p></div></article>
+        <article><span class="feature-icon">◉</span><div><h3>Browse in the app</h3><p>Use a real in-app browser with tabs, bookmarks, and recent history.</p></div></article>
+        <article><span class="feature-icon">▤</span><div><h3>Track every download</h3><p>See active progress and revisit recently finished, cancelled, or failed attempts.</p></div></article>
+        <article><span class="feature-icon">⌨</span><div><h3>Make it yours</h3><p>Customize keyboard shortcuts for the actions you use most.</p></div></article>
+        <article><span class="feature-icon">▣</span><div><h3>Save files locally</h3><p>Downloads go to a folder on your PC, with no command line to learn.</p></div></article>
       </section>
 
       <section class="install" id="install">
-        <div class="install-title"><div class="eyebrow">UP AND RUNNING IN A MINUTE</div><h2>Install RanTube</h2><p>The installer is small. On first launch, the app checks your PC for yt-dlp. If it cannot find one, you can allow it to download a separate copy from the official yt-dlp GitHub release.</p></div>
+        <div class="install-title"><div class="eyebrow">UP AND RUNNING IN A MINUTE</div><h2>Install RanTube</h2><p>The app checks your PC for yt-dlp. If it cannot find one, you can approve a separate copy from the official yt-dlp GitHub release. Then search videos or paste a link, inspect formats, and download to a folder you choose.</p></div>
         <ol class="steps">
           <li><span>01</span><div><b>Download the installer</b><p>Choose <strong>Download for Windows</strong> above and wait for the .exe file to finish.</p></div></li>
           <li><span>02</span><div><b>Run the setup file</b><p>Install for your Windows account. The installer does not need administrator access.</p></div></li>
           <li><span>03</span><div><b>Check your tools</b><p>If yt-dlp is already on your PC, the app uses it. Otherwise, choose <strong>Set up</strong> to download the app's own copy. Internet access is needed for setup.</p></div></li>
+          <li><span>04</span><div><b>Find and save media</b><p>Search for a video, review its available formats, or paste a supported site link. Choose your save folder and start the download.</p></div></li>
         </ol>
       </section>
 
       <section class="notice">
         <div class="notice-icon">i</div>
-        <div><h3>A note about FFmpeg and Windows</h3><p>FFmpeg is optional, but some separate audio and video streams need it to combine the files. Without FFmpeg, the app uses a combined format when the site offers one. Windows may show a SmartScreen warning because this installer is not code-signed.</p></div>
+        <div><h3>A note about formats and FFmpeg</h3><p>Separate video and audio streams require FFmpeg to merge; combined formats do not. Audio-only formats download as audio files. Windows may show a SmartScreen warning because this installer is not code-signed.</p></div>
       </section>
 
       <footer>
